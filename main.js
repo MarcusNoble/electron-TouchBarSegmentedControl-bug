@@ -1,12 +1,39 @@
-// Modules to control application life and create native browser window
-const {app, BrowserWindow} = require('electron')
-
-// Keep a global reference of the window object, if you don't, the window will
-// be closed automatically when the JavaScript object is garbage collected.
+const {app, BrowserWindow, TouchBar, nativeImage} = require('electron')
+const path = require('path');
 let mainWindow
 
+function createSegment(item) {
+  let icon;
+  if (item.iconLocation) {
+    icon = nativeImage.createFromPath(item.iconLocation);
+  }
+
+  return {
+    id: item.id,
+    label: !icon ? item.title : undefined,
+    icon
+  };
+}
+
+function createTouchBarGroup(items = []) {
+  const segments = items.map(createSegment);
+  const control = new TouchBar.TouchBarSegmentedControl({
+    segments,
+    mode: 'buttons',
+    segmentStyle: 'automatic'
+  });
+  return control;
+}
+
+const touchbarGroups = [
+  createTouchBarGroup([{
+    id: 'ID-1',
+    title: 'First',
+    iconLocation: path.join(__dirname, 'poo.png')
+  }])
+];
+
 function createWindow () {
-  // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
@@ -14,43 +41,41 @@ function createWindow () {
       nodeIntegration: true
     }
   })
-
-  // and load the index.html of the app.
   mainWindow.loadFile('index.html')
-
-  // Open the DevTools.
-  // mainWindow.webContents.openDevTools()
-
-  // Emitted when the window is closed.
   mainWindow.on('closed', function () {
-    // Dereference the window object, usually you would store windows
-    // in an array if your app supports multi windows, this is the time
-    // when you should delete the corresponding element.
     mainWindow = null
   })
+
+  // 1. Create new touchbar with our initial control (the poo emoji)
+  mainWindow.setTouchBar(new TouchBar({ items: touchbarGroups }));
+
+  // 2. After 5 seconds we're going to change the control to just have a text label
+  setTimeout(() => {
+    touchbarGroups[0].segments = [createSegment({
+      id: 'ID-2',
+      title: 'No icon should show'
+    })];
+  }, 5000);
+
+  // 3. After 10 seconds we're going to replace the control with the party popper emoji
+  setTimeout(() => {
+    touchbarGroups[0].segments = [createSegment({
+      id: 'ID-3',
+      title: 'Party popper should show',
+      iconLocation: path.join(__dirname, 'tada.png')
+    })];
+  }, 10000);
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.on('ready', createWindow)
 
-// Quit when all windows are closed.
+app.on('ready', createWindow)
 app.on('window-all-closed', function () {
-  // On macOS it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== 'darwin') {
     app.quit()
   }
 })
-
 app.on('activate', function () {
-  // On macOS it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
   if (mainWindow === null) {
     createWindow()
   }
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
